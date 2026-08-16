@@ -19,6 +19,7 @@ jobs:
   linux:
     name: Build ${{ matrix.platform }} server
     runs-on: ${{ matrix.runner }}
+    container: hexpm/elixir:1.19.0-erlang-28.0.2-debian-bookworm-20260610
     strategy:
       fail-fast: false
       matrix:
@@ -27,9 +28,7 @@ jobs:
             runner: ubuntu-24.04
             uname: x86_64
           - platform: linux-arm64
-            # Build on 22.04 so the self-contained ERTS links against glibc 2.35,
-            # keeping the arm64 tarball runnable on Debian 12 / NAS distros.
-            runner: ubuntu-22.04-arm
+            runner: ubuntu-24.04-arm
             uname: aarch64
     env:
       MIX_ENV: prod
@@ -39,10 +38,10 @@ jobs:
       - name: Verify Linux runner architecture
         run: test "$(uname -m)" = "${{ matrix.uname }}"
 
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: "28"
-          elixir-version: "1.19"
+      - name: Install system packages
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git build-essential xz-utils
 
       - uses: dtolnay/rust-toolchain@stable
 
