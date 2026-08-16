@@ -19,7 +19,7 @@ jobs:
   linux:
     name: Build ${{ matrix.platform }} server
     runs-on: ${{ matrix.runner }}
-    container: hexpm/elixir:1.19.0-erlang-28.0.2-debian-bookworm-20260610
+    container: hexpm/elixir:1.19.0-erlang-28.3.2-debian-bookworm-20260610
     strategy:
       fail-fast: false
       matrix:
