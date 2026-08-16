@@ -5,6 +5,7 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/mjason/dala/main/install.sh | bash
 #   ./install.sh [vX.Y.Z]        # specific version (default: latest)
+#   DALA_INSTALL_FROM_SOURCE=1 ./install.sh
 set -euo pipefail
 
 REPO="${DALA_REPO:-mjason/dala}"
@@ -29,6 +30,13 @@ case "$(uname -s)/$(uname -m)" in
     SERVICE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
     command -v systemctl >/dev/null || die "systemd (systemctl --user) is required"
     ;;
+  Linux/aarch64 | Linux/arm64)
+    PLATFORM="linux-arm64"
+    SERVICE_MANAGER="systemd"
+    SERVICE_NAME="dala"
+    SERVICE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    command -v systemctl >/dev/null || die "systemd (systemctl --user) is required"
+    ;;
   Darwin/arm64)
     PLATFORM="macos-arm64"
     SERVICE_MANAGER="launchd"
@@ -41,37 +49,67 @@ case "$(uname -s)/$(uname -m)" in
     ;;
 esac
 
-# --- resolve version ---------------------------------------------------------
-TAG="${1:-}"
-if [ -z "$TAG" ]; then
-  say "resolving latest release of $REPO"
-  # Skip client-v* tags: the repo also publishes desktop-client releases.
-  TAG=$(curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=15" |
-    grep '"tag_name"' | cut -d'"' -f4 | grep -m1 '^v[0-9]') || true
-  [ -n "$TAG" ] || die "could not resolve the latest release (does $REPO have releases?)"
-fi
-ASSET="dala-$TAG-$PLATFORM.tar.gz"
-URL="https://github.com/$REPO/releases/download/$TAG/$ASSET"
-DEST="$ROOT/versions/$TAG"
+build_from_source() {
+  [ -f mix.exs ] || die "DALA_INSTALL_FROM_SOURCE=1 must be run from a dala source checkout"
+  command -v mix >/dev/null || die "mix is required for source installs"
+  command -v cargo >/dev/null || die "cargo is required for source installs"
+  command -v npm >/dev/null || die "npm is required for source installs"
 
-# --- download + unpack -------------------------------------------------------
-if [ -x "$DEST/bin/dala" ]; then
-  say "$TAG already downloaded"
-else
-  say "downloading $ASSET"
-  TMP=$(mktemp -d)
-  trap 'rm -rf "$TMP"' EXIT
-  curl -fSL --progress-bar -o "$TMP/$ASSET" "$URL"
-  if curl -fsSL -o "$TMP/$ASSET.sha256" "$URL.sha256" 2>/dev/null; then
-    if [ "$PLATFORM" = "macos-arm64" ]; then
-      (cd "$TMP" && shasum -a 256 -c "$ASSET.sha256" >/dev/null) || die "checksum mismatch"
-    else
-      (cd "$TMP" && sha256sum -c "$ASSET.sha256" >/dev/null) || die "checksum mismatch"
-    fi
-    say "checksum ok"
-  fi
+  VERSION=$(sed -n 's/.*version: "\([^"]*\)".*/\1/p' mix.exs | head -1)
+  [ -n "$VERSION" ] || die "could not read project version from mix.exs"
+  TAG="${DALA_SOURCE_TAG:-source-v$VERSION-$PLATFORM-$(date +%Y%m%d%H%M%S)}"
+  DEST="$ROOT/versions/$TAG"
+
+  say "building source release $TAG"
+  MIX_ENV=prod mix deps.get --only prod
+  npm install --prefix assets
+  MIX_ENV=prod mix compile
+  MIX_ENV=prod mix tailwind.install --if-missing
+  MIX_ENV=prod mix assets.deploy
+  MIX_ENV=prod mix release --overwrite
+
+  rm -rf "$DEST"
   mkdir -p "$DEST"
-  tar -xzf "$TMP/$ASSET" -C "$DEST"
+  tar -C _build/prod/rel/dala -cf - . | tar -C "$DEST" -xf -
+}
+
+# --- resolve version ---------------------------------------------------------
+if [ "${DALA_INSTALL_FROM_SOURCE:-0}" = "1" ]; then
+  [ -z "${1:-}" ] || die "do not pass a release tag when DALA_INSTALL_FROM_SOURCE=1"
+  build_from_source
+else
+  TAG="${1:-}"
+  if [ -z "$TAG" ]; then
+    say "resolving latest release of $REPO"
+    # Skip client-v* tags: the repo also publishes desktop-client releases.
+    TAG=$(curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=15" |
+      grep '"tag_name"' | cut -d'"' -f4 | grep -m1 '^v[0-9]') || true
+    [ -n "$TAG" ] || die "could not resolve the latest release (does $REPO have releases?)"
+  fi
+  ASSET="dala-$TAG-$PLATFORM.tar.gz"
+  URL="https://github.com/$REPO/releases/download/$TAG/$ASSET"
+  DEST="$ROOT/versions/$TAG"
+
+  # --- download + unpack -----------------------------------------------------
+  if [ -x "$DEST/bin/dala" ]; then
+    say "$TAG already downloaded"
+  else
+    say "downloading $ASSET"
+    TMP=$(mktemp -d)
+    trap 'rm -rf "$TMP"' EXIT
+    curl -fSL --progress-bar -o "$TMP/$ASSET" "$URL" ||
+      die "could not download $ASSET; from a checkout, try: DALA_INSTALL_FROM_SOURCE=1 ./install.sh"
+    if curl -fsSL -o "$TMP/$ASSET.sha256" "$URL.sha256" 2>/dev/null; then
+      if [ "$PLATFORM" = "macos-arm64" ]; then
+        (cd "$TMP" && shasum -a 256 -c "$ASSET.sha256" >/dev/null) || die "checksum mismatch"
+      else
+        (cd "$TMP" && sha256sum -c "$ASSET.sha256" >/dev/null) || die "checksum mismatch"
+      fi
+      say "checksum ok"
+    fi
+    mkdir -p "$DEST"
+    tar -xzf "$TMP/$ASSET" -C "$DEST"
+  fi
 fi
 
 # --- configuration (first install only) --------------------------------------

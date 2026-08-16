@@ -19,6 +19,11 @@ case "$(uname -s)/$(uname -m)" in
     SERVICE_MANAGER="systemd"
     SERVICE_NAME="${DALA_SERVICE:-dala}"
     ;;
+  Linux/aarch64 | Linux/arm64)
+    PLATFORM="linux-arm64"
+    SERVICE_MANAGER="systemd"
+    SERVICE_NAME="${DALA_SERVICE:-dala}"
+    ;;
   Darwin/arm64)
     PLATFORM="macos-arm64"
     SERVICE_MANAGER="launchd"
@@ -50,7 +55,8 @@ if [ ! -x "$DEST/bin/dala" ]; then
   say "downloading $ASSET"
   TMP=$(mktemp -d)
   trap 'rm -rf "$TMP"' EXIT
-  curl -fSL --progress-bar -o "$TMP/$ASSET" "$URL"
+  curl -fSL --progress-bar -o "$TMP/$ASSET" "$URL" ||
+    die "could not download $ASSET; make sure this release publishes a $PLATFORM server asset"
   if curl -fsSL -o "$TMP/$ASSET.sha256" "$URL.sha256" 2>/dev/null; then
     if [ "$PLATFORM" = "macos-arm64" ]; then
       (cd "$TMP" && shasum -a 256 -c "$ASSET.sha256" >/dev/null) || die "checksum mismatch"

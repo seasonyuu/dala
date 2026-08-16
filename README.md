@@ -29,7 +29,7 @@
 
 ![Quick open](docs/screenshots/quick-open.png)
 
-## Quick start (Linux x86_64 / macOS arm64)
+## Quick start (Linux x86_64 / Linux arm64 / macOS arm64)
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/mjason/dala/main/install.sh | bash
@@ -399,7 +399,7 @@ in `config.jsonc`.
 
 Releases are built by GitHub Actions on every `v*` tag
 (`.github/workflows/release.yml`): production assets, Rust NIFs and the PTY
-holder are packaged for Linux x86_64 and macOS arm64. Every Mach-O artifact in
+holder are packaged for Linux x86_64, Linux arm64 and macOS arm64. Every Mach-O artifact in
 the macOS release is signed with the Developer ID certificate and the complete
 release is submitted to Apple notarization before publication.
 
@@ -408,6 +408,13 @@ Local development needs Elixir 1.19+/OTP 28, Rust and Node 22:
 ```sh
 mix setup
 mix phx.server        # http://localhost:4000
+```
+
+To install a source-built, arch-native user daemon from a checkout (useful for
+local changes or before your fork publishes a `linux-arm64` asset):
+
+```sh
+DALA_INSTALL_FROM_SOURCE=1 ./install.sh
 ```
 
 ## Architecture

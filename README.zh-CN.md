@@ -29,14 +29,14 @@
 
 ![快速打开](docs/screenshots/quick-open.png)
 
-## 快速开始（Linux x86_64）
+## 快速开始（Linux x86_64 / Linux arm64 / macOS arm64）
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/mjason/dala/main/install.sh | bash
 ```
 
-以 systemd **用户守护进程**安装预编译包，地址 `http://localhost:4400`。
-配置在 `~/.config/dala/dala.env`，数据在 `~/.local/share/dala`。
+以 **用户守护进程**安装预编译包，地址 `http://localhost:4400`：Linux 使用 systemd，macOS 使用 launchd。
+配置在 `~/.config/dala/config.jsonc`，数据在 `~/.local/share/dala`。
 
 升级：点侧栏的升级按钮，或者：
 
@@ -337,13 +337,20 @@ config :dala, DalaWeb.Endpoint,
 
 发布产物由 GitHub Actions 在打 `v*` tag 时自动构建
 （`.github/workflows/release.yml`）：生产前端（minify + digest）、Rust NIF、
-PTY holder，打包为 `dala-<tag>-linux-x86_64.tar.gz`。
+PTY holder，打包为 `dala-<tag>-linux-x86_64.tar.gz`、`dala-<tag>-linux-arm64.tar.gz` 和 `dala-<tag>-macos-arm64.tar.gz`。
 
 本地开发需要 Elixir 1.19+/OTP 28、Rust、Node 22：
 
 ```sh
 mix setup
 mix phx.server        # http://localhost:4000
+```
+
+要从当前 checkout 构建并安装一个本机架构的用户守护进程（适合本地改动，
+或 fork 还没发布 `linux-arm64` 产物时）：
+
+```sh
+DALA_INSTALL_FROM_SOURCE=1 ./install.sh
 ```
 
 ## 架构速览
