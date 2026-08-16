@@ -27,7 +27,9 @@ jobs:
             runner: ubuntu-24.04
             uname: x86_64
           - platform: linux-arm64
-            runner: ubuntu-24.04-arm
+            # Build on 22.04 so the self-contained ERTS links against glibc 2.35,
+            # keeping the arm64 tarball runnable on Debian 12 / NAS distros.
+            runner: ubuntu-22.04-arm
             uname: aarch64
     env:
       MIX_ENV: prod
