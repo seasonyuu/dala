@@ -17,6 +17,8 @@ concurrency:
 jobs:
   linux:
     name: Build linux-${{ matrix.arch }} server
+    runs-on: ${{ matrix.runner }}
+    container: hexpm/elixir:1.19.0-erlang-28.0.2-debian-bookworm-20260610
     strategy:
       matrix:
         include:
@@ -24,35 +26,24 @@ jobs:
             runner: ubuntu-24.04
           - arch: arm64
             runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
     env:
       MIX_ENV: prod
       PLATFORM: linux-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read toolchain versions
-        id: versions
-        shell: pwsh
+      - name: Install system packages
         run: |
-          $versions = Get-Content toolchain.json | ConvertFrom-Json
-          "otp=$($versions.otp)" >> $env:GITHUB_OUTPUT
-          "elixir=$($versions.elixir)" >> $env:GITHUB_OUTPUT
-          "node=$($versions.node)" >> $env:GITHUB_OUTPUT
-          "rust=$($versions.rust)" >> $env:GITHUB_OUTPUT
-
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: ${{ steps.versions.outputs.otp }}
-          elixir-version: ${{ steps.versions.outputs.elixir }}
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git build-essential xz-utils
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ steps.versions.outputs.rust }}
+          toolchain: stable
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ steps.versions.outputs.node }}
+          node-version: "22"
           cache: npm
           cache-dependency-path: assets/package-lock.json
 
