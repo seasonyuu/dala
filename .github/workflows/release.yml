@@ -387,18 +387,23 @@ jobs:
         run: |
           cd artifacts
           sha256sum -c ./*.sha256
+          test -f "dala-${GITHUB_REF_NAME}-linux-x86_64.tar.gz"
+          test -f "dala-${GITHUB_REF_NAME}-macos-arm64.tar.gz"
+          test -f "dala-${GITHUB_REF_NAME}-windows-x86_64.zip"
+          test -f "dala-${GITHUB_REF_NAME}-windows-x86_64.zip.sha256"
           for archive in ./*.tar.gz; do
             CONTENTS="$RUNNER_TEMP/$(basename "$archive").txt"
             tar -tzf "$archive" > "$CONTENTS"
             grep -q '/priv/native/dala_git.so$' "$CONTENTS"
             grep -q '/priv/native/dala_theme_renderer.so$' "$CONTENTS"
           done
-          for archive in ./*.zip; do
-            unzip -l "$archive" > "$RUNNER_TEMP/$(basename "$archive").txt"
-            grep -q 'priv/bin/dala_holder.exe' "$RUNNER_TEMP/$(basename "$archive").txt"
-            grep -q 'priv/native/dala_git.dll' "$RUNNER_TEMP/$(basename "$archive").txt"
-            grep -q 'priv/native/dala_theme_renderer.dll' "$RUNNER_TEMP/$(basename "$archive").txt"
-          done
+          WINDOWS_ARCHIVE="dala-${GITHUB_REF_NAME}-windows-x86_64.zip"
+          unzip -l "$WINDOWS_ARCHIVE" > "$RUNNER_TEMP/$WINDOWS_ARCHIVE.txt"
+          grep -q 'priv/bin/dala_holder.exe' "$RUNNER_TEMP/$WINDOWS_ARCHIVE.txt"
+          grep -q 'priv/native/dala_git.dll' "$RUNNER_TEMP/$WINDOWS_ARCHIVE.txt"
+          grep -q 'priv/native/dala_theme_renderer.dll' "$RUNNER_TEMP/$WINDOWS_ARCHIVE.txt"
+          grep -q 'scripts/windows/update-helper.ps1' "$RUNNER_TEMP/$WINDOWS_ARCHIVE.txt"
+          grep -q 'scripts/windows/queue-update.ps1' "$RUNNER_TEMP/$WINDOWS_ARCHIVE.txt"
 
       - name: Reject duplicate publication
         env:
@@ -412,6 +417,13 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*
+          files: |
+            artifacts/dala-${{ github.ref_name }}-linux-x86_64.tar.gz
+            artifacts/dala-${{ github.ref_name }}-linux-x86_64.tar.gz.sha256
+            artifacts/dala-${{ github.ref_name }}-macos-arm64.tar.gz
+            artifacts/dala-${{ github.ref_name }}-macos-arm64.tar.gz.sha256
+            artifacts/dala-${{ github.ref_name }}-windows-x86_64.zip
+            artifacts/dala-${{ github.ref_name }}-windows-x86_64.zip.sha256
+          fail_on_unmatched_files: true
           generate_release_notes: true
           overwrite_files: false

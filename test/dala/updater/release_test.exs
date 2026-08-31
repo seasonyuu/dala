@@ -38,6 +38,40 @@ defmodule Dala.Updater.ReleaseTest do
     end
   end
 
+  describe "update_available?/3" do
+    test "requires a newer release with a matching platform asset" do
+      release = %{
+        "tag_name" => "v1.2.3",
+        "draft" => false,
+        "prerelease" => false,
+        "assets" => [
+          %{
+            "name" => "dala-v1.2.3-windows-x86_64.zip",
+            "browser_download_url" => "https://example.test/windows.zip"
+          }
+        ]
+      }
+
+      assert Release.update_available?(release, "1.2.2", "windows-x86_64")
+      refute Release.update_available?(release, "1.2.2", "linux-x86_64")
+      refute Release.update_available?(release, "1.2.3", "windows-x86_64")
+    end
+
+    test "does not treat a client release as a server update" do
+      release = %{
+        "tag_name" => "client-v2.0.0",
+        "assets" => [
+          %{
+            "name" => "dala-client-v2.0.0-windows-x86_64.zip",
+            "browser_download_url" => "https://example.test/client.zip"
+          }
+        ]
+      }
+
+      refute Release.update_available?(release, "1.0.0", "windows-x86_64")
+    end
+  end
+
   describe "server_release?/1" do
     test "table: tag prefix, draft and prerelease filtering" do
       cases = [

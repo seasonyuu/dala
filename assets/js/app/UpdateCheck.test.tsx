@@ -58,6 +58,22 @@ describe("UpdateCheck config-migration nudge", () => {
   });
 });
 
+describe("UpdateCheck availability", () => {
+  it("does not show an update action when the server has no compatible asset", async () => {
+    rpc.checkUpdate.mockResolvedValue(
+      info({
+        latest: "0.27.3",
+        tag: "v0.27.3",
+        updateAvailable: false,
+      }),
+    );
+    renderCheck();
+
+    await waitFor(() => expect(rpc.checkUpdate).toHaveBeenCalled());
+    expect(document.querySelector("#update-now-button")).toBeNull();
+  });
+});
+
 describe("UpdateCheck activation status", () => {
   it("shows a rollback reported by the restarted server", async () => {
     rpc.checkUpdate.mockResolvedValue(

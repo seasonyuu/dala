@@ -39,7 +39,7 @@ defmodule Dala.Updater do
          current: current_version(),
          latest: latest,
          tag: tag,
-         update_available: enabled?() and Release.newer?(latest, current_version()),
+         update_available: enabled?() and Release.update_available?(release, current_version()),
          notes_url: release["html_url"],
          update_state: status && status.state,
          update_message: status && status.message,

@@ -31,13 +31,17 @@ defmodule Dala.Terminal.Updater do
                   ]
 
       run fn _input, _context ->
-        with {:ok, info} <- Dala.Updater.check() do
-          {:ok,
-           Map.put(
-             info,
-             :legacy_env_config,
-             Application.get_env(:dala, :legacy_env_config, false)
-           )}
+        case Dala.Updater.check() do
+          {:ok, info} ->
+            {:ok,
+             Map.put(
+               info,
+               :legacy_env_config,
+               Application.get_env(:dala, :legacy_env_config, false)
+             )}
+
+          {:error, reason} ->
+            {:error, updater_error(reason)}
         end
       end
     end
@@ -51,8 +55,18 @@ defmodule Dala.Terminal.Updater do
                   ]
 
       run fn _input, _context ->
-        Dala.Updater.apply_latest()
+        case Dala.Updater.apply_latest() do
+          {:ok, result} ->
+            {:ok, result}
+
+          {:error, reason} ->
+            {:error, updater_error(reason)}
+        end
       end
     end
+  end
+
+  defp updater_error(reason) do
+    Ash.Error.Changes.InvalidChanges.exception(message: to_string(reason))
   end
 end

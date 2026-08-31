@@ -41,6 +41,20 @@ defmodule Dala.Updater.Release do
       Version.compare(latest, current) == :gt
   end
 
+  @doc "True when a newer server release has an asset for the requested platform."
+  def update_available?(release, current, platform \\ platform())
+
+  def update_available?(%{"tag_name" => tag} = release, current, platform)
+      when is_binary(tag) and is_binary(current) do
+    latest = String.trim_leading(tag, "v")
+
+    server_release?(release) and
+      newer?(latest, current) and
+      match?({:ok, _url}, asset_url(release, platform))
+  end
+
+  def update_available?(_release, _current, _platform), do: false
+
   @doc """
   True for a published SERVER release. Server and desktop-client releases
   share the repo but use distinct tag prefixes (`v*` vs `client-v*`), and
