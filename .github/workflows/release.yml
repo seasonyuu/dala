@@ -6,6 +6,7 @@ name: Release
 on:
   push:
     tags: ["v*"]
+    branches: ["linux-arm64-support"]
 
 permissions:
   contents: write
